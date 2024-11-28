@@ -53,6 +53,8 @@ from ezcolorlog import root_logger as logger
 
 from packaging import version
 
+import tensorflow as tf
+
 
 logger.setLevel(logging.WARNING)
 
@@ -906,27 +908,120 @@ def preprocess(
 
     return dict(input_ids=input_ids, labels=targets)
 
+# TFDS preprocessing
+def process_single_example(example):
+    """Convert a single TF dataset example into multiple conversation samples."""
+    # Get image and detections
+    image = example['image']
+    boxes = example['detections']['box']
+    queries = example['detections']['query']
+    orig_height = example['height']
+    orig_width = example['width']
+    
+    def create_sample(box, query):
+        # Process box coordinates
+        x_center, y_center, width, height = box[0], box[1], box[2], box[3]
+        orig_size = tf.maximum(orig_height, orig_width)
+        
+        # Calculate padding ratios
+        height_ratio = tf.cast(orig_size, tf.float32) / tf.cast(orig_height, tf.float32)
+        width_ratio = tf.cast(orig_size, tf.float32) / tf.cast(orig_width, tf.float32)
+        
+        # Adjust coordinates
+        x_center = x_center * width_ratio
+        y_center = y_center * height_ratio
+        width = width * width_ratio
+        height = height * height_ratio
+        
+        # Convert to boundary coordinates
+        xmin = x_center - width/2
+        ymin = y_center - height/2
+        xmax = x_center + width/2
+        ymax = y_center + height/2
+        
+        # Clip coordinates
+        xmin = tf.clip_by_value(xmin, 0.0, 1.0)
+        ymin = tf.clip_by_value(ymin, 0.0, 1.0)
+        xmax = tf.clip_by_value(xmax, 0.0, 1.0)
+        ymax = tf.clip_by_value(ymax, 0.0, 1.0)
+        
+        # Convert to percentages
+        xmin_pct = tf.cast(xmin * 100, tf.int32)
+        ymin_pct = tf.cast(ymin * 100, tf.int32)
+        xmax_pct = tf.cast(xmax * 100, tf.int32)
+        ymax_pct = tf.cast(ymax * 100, tf.int32)
+        
+        # Create conversation format
+        conversations = [
+            {
+                "from": "human",
+                "value": tf.strings.format(
+                    "<image>\nWhat is the object at boundaries ({}, {}) to ({}, {})?",
+                    [xmin_pct, ymin_pct, xmax_pct, ymax_pct]
+                )
+            },
+            {
+                "from": "gpt",
+                "value": tf.strings.format("The object is {}", [query])
+            }
+        ]
+        
+        # Create sample in required format
+        return {
+            "image": image,
+            "conversations": conversations
+        }
+    
+    # Map over all boxes and queries
+    samples = tf.map_fn(
+        lambda x: create_sample(x[0], x[1]),
+        (boxes, queries),
+        dtype={
+            "image": tf.uint8,
+            "conversations": {
+                "from": tf.string,
+                "value": tf.string
+            }
+        }
+    )
+    
+    return samples
+
+# Apply transformation to dataset
+def transform_dataset(dataset):
+    # Filter out examples with empty detections
+    filtered_dataset = dataset.filter(
+        lambda x: tf.greater(tf.shape(x['detections']['box'])[0], 0)
+    )
+
+    # Use flat_map to convert each example into multiple samples
+    transformed_dataset = filtered_dataset.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(
+        process_single_example(x)
+    ))
+
+    # Add prefetch to overlap data preprocessing with training
+    # tf.data.AUTOTUNE lets TensorFlow automatically determine the best prefetch buffer size
+    transformed_dataset = transformed_dataset.prefetch(tf.data.AUTOTUNE)
+
+    return transformed_dataset
 
 class LazySupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
 
-    def __init__(self, data_path: str,
+    def __init__(self, tf_dataset: tf.data.Dataset,
                  tokenizer: transformers.PreTrainedTokenizer,
                  data_args: DataArguments):
         super(LazySupervisedDataset, self).__init__()
 
         self.tokenizer = tokenizer
-        self.data_path = data_path
+        self.dataset = transform_dataset(tf_dataset)
         self.data_args = data_args
-        self.length = self._get_length()
+        self.length = 51977472 # TODO: Calculate length of dataset
+        # Initialize iterator
+        self.iterator = iter(self.dataset)
 
-    def _get_length(self):
-        """Calculates the number of samples in the .jsonl file."""
-        with open(self.data_path, 'r') as file:
-            for i, _ in enumerate(file):
-                pass
-        return i + 1
-
+    # We cannot implement __len__ because it will cause the trainer to use sampler
+    # We have to make data loading sequential
     def __len__(self):
         """Returns the number of samples in the dataset."""
         return self.length
@@ -940,14 +1035,28 @@ class LazySupervisedDataset(Dataset):
 
         self.length_list = []
         self.modality_length_list = []
-        with open(self.data_path, 'r') as file:
-            for line in file:
-                sample = json.loads(line.strip())
-                img_tokens = self.data_args.image_token_len if self._has_image(sample) else 0
-                cur_len = sum(len(conv['value'].split()) for conv in sample['conversations'])
+        
+        # Create a new iterator for computing lengths
+        length_iterator = iter(self.dataset)
+        
+        try:
+            while True:
+                sample = next(length_iterator)
+                # Convert TF tensors to Python values for consistent processing
+                conversations = [{
+                    'value': conv['value'].numpy().decode('utf-8')
+                } for conv in sample['conversations']]
+                
+                # Keep same logic as original
+                img_tokens = self.data_args.image_token_len
+                cur_len = sum(len(conv['value'].split()) for conv in conversations)
                 self.length_list.append(cur_len + img_tokens)
-                modality_len = cur_len if 'image' in sample else -cur_len
+                modality_len = cur_len  # Always has image in our case since we filtered
                 self.modality_length_list.append(modality_len)
+                
+        except StopIteration:
+            pass
+
         return self.length_list, self.modality_length_list
 
     @property
@@ -966,24 +1075,38 @@ class LazySupervisedDataset(Dataset):
     def __getitem__(self, i) -> Dict[str, torch.Tensor]:
         #sources = self.list_data_dict[i]
 
-        with open(self.data_path, 'r') as file:
-            for idx, line in enumerate(file):
-                if idx == i:
-                    sources = json.loads(line.strip())
-                    break
-        dat = sources
-        if isinstance(i, int):
-            sources = [sources]
-        assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
-        has_image = self._has_image(dat)
+        try:
+            # For sequential access
+            data = next(self.iterator)
+        except StopIteration:
+            # Reset iterator if exhausted
+            self.iterator = iter(self.dataset)
+            data = next(self.iterator)
+
+        # Convert TF tensors to numpy/PIL Image
+        image_array = data['image'].numpy()
+        image = Image.fromarray(image_array)
+        
+        # Create source in same format as before
+        sources = {
+            'conversations': [
+                {
+                    'from': conv['from'].numpy().decode('utf-8'),
+                    'value': conv['value'].numpy().decode('utf-8')
+                }
+                for conv in data['conversations']
+            ],
+            'image': image
+        }
+        
+        # Make it a list with single item as expected by preprocess functions
+        sources = [sources]
+        
+        has_image = True
         if has_image:
-            image_file = dat['image']
-            image_folder = self.data_args.image_folder
+            image_file = sources[0]['image']
             processor_aux_list = self.data_args.image_processor_aux_list
-            try:
-                image = Image.open(os.path.join(image_folder, image_file)).convert('RGB')
-            except:
-                return self.__getitem__(0)
+            image = image_file  # We already have PIL image
             image_size = image.size
             def expand2square(pil_img, background_color):
                 width, height = pil_img.size

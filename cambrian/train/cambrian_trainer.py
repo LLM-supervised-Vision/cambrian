@@ -204,6 +204,10 @@ class CambrianTrainer(Trainer):
         if self.train_dataset is None or not has_length(self.train_dataset):
             return None
 
+        # if the train_dataset has a iterator, return None
+        if hasattr(self.train_dataset, "iterator"):
+            return None
+
         if self.args.group_by_modality_length:
             lengths = self.train_dataset.modality_lengths
             return LengthGroupedSampler(
