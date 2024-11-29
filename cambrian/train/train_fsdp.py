@@ -910,10 +910,8 @@ def preprocess(
 
     return dict(input_ids=input_ids, labels=targets)
 
-# TFDS preprocessing
 def process_single_example(example):
     """Convert a single TF dataset example into multiple conversation samples."""
-    # Get image and detections
     image = example['image']
     boxes = example['detections']['box']
     queries = example['detections']['query']
@@ -925,50 +923,41 @@ def process_single_example(example):
         x_center, y_center, width, height = box[0], box[1], box[2], box[3]
         orig_size = tf.maximum(orig_height, orig_width)
         
-        # Calculate padding ratios
         height_ratio = tf.cast(orig_size, tf.float32) / tf.cast(orig_height, tf.float32)
         width_ratio = tf.cast(orig_size, tf.float32) / tf.cast(orig_width, tf.float32)
         
-        # Adjust coordinates
         x_center = x_center * width_ratio
         y_center = y_center * height_ratio
         width = width * width_ratio
         height = height * height_ratio
         
-        # Convert to boundary coordinates
         xmin = x_center - width/2
         ymin = y_center - height/2
         xmax = x_center + width/2
         ymax = y_center + height/2
         
-        # Clip coordinates
         xmin = tf.clip_by_value(xmin, 0.0, 1.0)
         ymin = tf.clip_by_value(ymin, 0.0, 1.0)
         xmax = tf.clip_by_value(xmax, 0.0, 1.0)
         ymax = tf.clip_by_value(ymax, 0.0, 1.0)
         
-        # Convert to percentages
         xmin_pct = tf.cast(xmin * 100, tf.int32)
         ymin_pct = tf.cast(ymin * 100, tf.int32)
         xmax_pct = tf.cast(xmax * 100, tf.int32)
         ymax_pct = tf.cast(ymax * 100, tf.int32)
         
-        # Create conversation format
-        conversations = [
-            {
-                "from": "human",
-                "value": tf.strings.format(
-                    "<image>\nWhat is the object at boundaries ({}, {}) to ({}, {})?",
-                    [xmin_pct, ymin_pct, xmax_pct, ymax_pct]
-                )
-            },
-            {
-                "from": "gpt",
-                "value": tf.strings.format("The object is {}", [query])
-            }
-        ]
+        # Create conversation list with proper structure
+        conversations = [{
+            "from": tf.constant("human", tf.string),
+            "value": tf.strings.format(
+                "<image>\nWhat is the object at boundaries ({}, {}) to ({}, {})?",
+                [xmin_pct, ymin_pct, xmax_pct, ymax_pct]
+            )
+        }, {
+            "from": tf.constant("gpt", tf.string),
+            "value": tf.strings.format("The object is {}", [query])
+        }]
         
-        # Create sample in required format
         return {
             "image": image,
             "conversations": conversations
@@ -980,29 +969,35 @@ def process_single_example(example):
         (boxes, queries),
         dtype={
             "image": tf.uint8,
-            "conversations": {
+            "conversations": [{
                 "from": tf.string,
                 "value": tf.string
-            }
+            }] * 2  # Specify the exact structure with 2 conversation elements
         }
     )
     
     return samples
 
-# Apply transformation to dataset
 def transform_dataset(dataset):
     # Filter out examples with empty detections
     filtered_dataset = dataset.filter(
         lambda x: tf.greater(tf.shape(x['detections']['box'])[0], 0)
     )
 
-    # Use flat_map to convert each example into multiple samples
-    transformed_dataset = filtered_dataset.flat_map(lambda x: tf.data.Dataset.from_tensor_slices(
-        process_single_example(x)
-    ))
+    def process_flat_map(example):
+        # Process the example to create multiple samples
+        samples = process_single_example(example)
+        
+        # Convert to a dataset directly from the tensor structure
+        return tf.data.Dataset.from_tensor_slices({
+            'image': samples['image'],
+            'conversations': samples['conversations']
+        })
 
+    # Use flat_map to create a dataset from each example
+    transformed_dataset = filtered_dataset.flat_map(process_flat_map)
+    
     # Add prefetch to overlap data preprocessing with training
-    # tf.data.AUTOTUNE lets TensorFlow automatically determine the best prefetch buffer size
     transformed_dataset = transformed_dataset.prefetch(tf.data.AUTOTUNE)
 
     return transformed_dataset
