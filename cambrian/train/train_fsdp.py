@@ -55,6 +55,8 @@ from packaging import version
 
 import tensorflow as tf
 
+import tensorflow_datasets as tfds
+
 
 logger.setLevel(logging.WARNING)
 
@@ -1363,7 +1365,7 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
                                 data_args) -> Dict:
     """Make dataset and collator for supervised fine-tuning."""
     train_dataset = LazySupervisedDataset(tokenizer=tokenizer,
-                                data_path=data_args.data_path,
+                                tf_dataset=tfds.load(data_args.data_path, split='train', data_dir='gs://us-central2-storage/tensorflow_datasets'),
                                 data_args=data_args)
     data_collator_kwargs = {
             'tokenizer': tokenizer,
@@ -1651,6 +1653,7 @@ def train(INDEX, attn_implementation=None):
                     cache_dir=training_args.cache_dir,
                     do_sample=True,
                     torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
+                    revision="653ee820c4f2ee66427e997b4a8ca3e9323e7d46", # use the first version of phi-3
                     **bnb_model_from_pretrained_args
             )
             cambrian.model.language_model.phi3.modeling_phi3.Phi3RMSNorm.forward = forward
@@ -1722,6 +1725,15 @@ def train(INDEX, attn_implementation=None):
             cache_dir=training_args.cache_dir,
             model_max_length=training_args.model_max_length,
             padding_side="right"
+        )
+    elif 'Phi' in model_args.model_name_or_path:
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            model_args.model_name_or_path,
+            cache_dir=training_args.cache_dir,
+            model_max_length=training_args.model_max_length,
+            padding_side="right",
+            revision="653ee820c4f2ee66427e997b4a8ca3e9323e7d46", # use the first version of phi-3
+            use_fast=False,
         )
     else:
         tokenizer = transformers.AutoTokenizer.from_pretrained(
