@@ -942,10 +942,10 @@ def process_single_example(example):
         ymax_pct = tf.cast(ymax * 100, tf.int32)
 
         human_msg = tf.strings.format(
-            '<image>\nWhat is the object at boundaries ({}, {}) to ({}, {})?',
+            '<image>\nWhat is the object at boundaries ({}%, {}%) to ({}%, {}%)?',
             [xmin_pct, ymin_pct, xmax_pct, ymax_pct]
         )
-        gpt_msg = tf.strings.format('The object is {}', [query])
+        gpt_msg = tf.strings.join(['The object is ', query])
         
         return (image, human_msg, gpt_msg)
 
@@ -970,6 +970,9 @@ def transform_dataset(dataset):
     
     # Unbatch to get individual samples
     unbatched_dataset = processed_dataset.unbatch()
+
+    # shuffle the dataset
+    unbatched_dataset = unbatched_dataset.shuffle(1024)
     
     return unbatched_dataset.prefetch(tf.data.AUTOTUNE)
 
@@ -1072,7 +1075,8 @@ class LazySupervisedDataset(Dataset):
                 ]
             }
         
-        
+        # # test: print the sources
+        # print(sources)
         
         # Make it a list with single item as expected by preprocess functions
         sources = [sources]
