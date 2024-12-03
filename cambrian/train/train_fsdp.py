@@ -911,15 +911,15 @@ def preprocess(
     return dict(input_ids=input_ids, labels=targets)
 
 def process_single_example(example):
-    """Convert a single TF dataset example into multiple conversation samples."""
+    """Process a single example into multiple samples."""
     image = example['image']
     boxes = example['detections']['box']
     queries = example['detections']['query']
     orig_height = example['height']
     orig_width = example['width']
     
-    def create_sample(box, query):
-        # Process box coordinates
+    def create_formatted_sample(inputs):
+        box, query = inputs[0], inputs[1]
         x_center, y_center, width, height = box[0], box[1], box[2], box[3]
         orig_size = tf.maximum(orig_height, orig_width)
         
@@ -931,76 +931,47 @@ def process_single_example(example):
         width = width * width_ratio
         height = height * height_ratio
         
-        xmin = x_center - width/2
-        ymin = y_center - height/2
-        xmax = x_center + width/2
-        ymax = y_center + height/2
-        
-        xmin = tf.clip_by_value(xmin, 0.0, 1.0)
-        ymin = tf.clip_by_value(ymin, 0.0, 1.0)
-        xmax = tf.clip_by_value(xmax, 0.0, 1.0)
-        ymax = tf.clip_by_value(ymax, 0.0, 1.0)
+        xmin = tf.clip_by_value(x_center - width/2, 0.0, 1.0) 
+        ymin = tf.clip_by_value(y_center - height/2, 0.0, 1.0)
+        xmax = tf.clip_by_value(x_center + width/2, 0.0, 1.0)
+        ymax = tf.clip_by_value(y_center + height/2, 0.0, 1.0)
         
         xmin_pct = tf.cast(xmin * 100, tf.int32)
         ymin_pct = tf.cast(ymin * 100, tf.int32)
         xmax_pct = tf.cast(xmax * 100, tf.int32)
         ymax_pct = tf.cast(ymax * 100, tf.int32)
+
+        human_msg = tf.strings.format(
+            '<image>\nWhat is the object at boundaries ({}, {}) to ({}, {})?',
+            [xmin_pct, ymin_pct, xmax_pct, ymax_pct]
+        )
+        gpt_msg = tf.strings.format('The object is {}', [query])
         
-        # Create conversation list with proper structure
-        conversations = [{
-            "from": tf.constant("human", tf.string),
-            "value": tf.strings.format(
-                "<image>\nWhat is the object at boundaries ({}, {}) to ({}, {})?",
-                [xmin_pct, ymin_pct, xmax_pct, ymax_pct]
-            )
-        }, {
-            "from": tf.constant("gpt", tf.string),
-            "value": tf.strings.format("The object is {}", [query])
-        }]
-        
-        return {
-            "image": image,
-            "conversations": conversations
-        }
-    
-    # Map over all boxes and queries
-    samples = tf.map_fn(
-        lambda x: create_sample(x[0], x[1]),
+        return (image, human_msg, gpt_msg)
+
+    return tf.map_fn(
+        create_formatted_sample,
         (boxes, queries),
-        dtype={
-            "image": tf.uint8,
-            "conversations": [{
-                "from": tf.string,
-                "value": tf.string
-            }] * 2  # Specify the exact structure with 2 conversation elements
-        }
+        fn_output_signature=(tf.uint8, tf.string, tf.string)
     )
-    
-    return samples
 
 def transform_dataset(dataset):
+    """Transform the dataset into the required format."""
     # Filter out examples with empty detections
     filtered_dataset = dataset.filter(
         lambda x: tf.greater(tf.shape(x['detections']['box'])[0], 0)
     )
-
-    def process_flat_map(example):
-        # Process the example to create multiple samples
-        samples = process_single_example(example)
-        
-        # Convert to a dataset directly from the tensor structure
-        return tf.data.Dataset.from_tensor_slices({
-            'image': samples['image'],
-            'conversations': samples['conversations']
-        })
-
-    # Use flat_map to create a dataset from each example
-    transformed_dataset = filtered_dataset.flat_map(process_flat_map)
     
-    # Add prefetch to overlap data preprocessing with training
-    transformed_dataset = transformed_dataset.prefetch(tf.data.AUTOTUNE)
-
-    return transformed_dataset
+    # Process each example into multiple samples
+    processed_dataset = filtered_dataset.map(
+        process_single_example,
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    
+    # Unbatch to get individual samples
+    unbatched_dataset = processed_dataset.unbatch()
+    
+    return unbatched_dataset.prefetch(tf.data.AUTOTUNE)
 
 class LazySupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
@@ -1073,28 +1044,35 @@ class LazySupervisedDataset(Dataset):
         #sources = self.list_data_dict[i]
 
         try:
-            # For sequential access
-            data = next(self.iterator)
+            # Get raw tensors from the dataset
+            image_tensor, human_msg, gpt_msg = next(self.iterator)
+            
+            # Convert tensors to Python objects
+            image = Image.fromarray(image_tensor.numpy())
+            sources = {
+                'image': image,
+                'conversations': [
+                    {'from': 'human', 'value': human_msg.numpy().decode()},
+                    {'from': 'gpt', 'value': gpt_msg.numpy().decode()}
+                ]
+            }
         except StopIteration:
             # Reset iterator if exhausted
             self.iterator = iter(self.dataset)
-            data = next(self.iterator)
-
-        # Convert TF tensors to numpy/PIL Image
-        image_array = data['image'].numpy()
-        image = Image.fromarray(image_array)
+            # Get raw tensors from the dataset
+            image_tensor, human_msg, gpt_msg = next(self.iterator)
+            
+            # Convert tensors to Python objects
+            image = Image.fromarray(image_tensor.numpy())
+            sources = {
+                'image': image,
+                'conversations': [
+                    {'from': 'human', 'value': human_msg.numpy().decode()},
+                    {'from': 'gpt', 'value': gpt_msg.numpy().decode()}
+                ]
+            }
         
-        # Create source in same format as before
-        sources = {
-            'conversations': [
-                {
-                    'from': conv['from'].numpy().decode('utf-8'),
-                    'value': conv['value'].numpy().decode('utf-8')
-                }
-                for conv in data['conversations']
-            ],
-            'image': image
-        }
+        
         
         # Make it a list with single item as expected by preprocess functions
         sources = [sources]
