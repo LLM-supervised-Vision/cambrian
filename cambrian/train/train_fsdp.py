@@ -1647,6 +1647,7 @@ def train(INDEX, attn_implementation=None):
             model = CambrianQwen2ForCausalLM.from_pretrained(
                 model_name,
                 cache_dir=training_args.cache_dir,
+                attn_implementation="eager",
                 do_sample=True,
                 torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
                 **bnb_model_from_pretrained_args
@@ -1721,9 +1722,9 @@ def train(INDEX, attn_implementation=None):
             model_max_length=training_args.model_max_length,
             padding_side="right"
         )
-    elif 'Phi' in model_args.model_name_or_path:
+    elif 'Phi' in model_args.model_name_or_path or 'Qwen' in model_args.model_name_or_path:
         tokenizer = transformers.AutoTokenizer.from_pretrained(
-            model_args.model_name_or_path,
+            "microsoft/Phi-3-mini-4k-instruct",
             cache_dir=training_args.cache_dir,
             model_max_length=training_args.model_max_length,
             padding_side="right",
