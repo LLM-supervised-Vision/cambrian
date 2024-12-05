@@ -16,9 +16,9 @@ python cambrian/train/train_tpu.py \
     --image_token_len 576 \
     --image_position 13 \
     --mm_projector_type mlp2x_gelu \
-    --mm_vision_sampler_lr 1e-4 \
+    --unfreeze_mm_vision_tower True \
+    --mm_vision_tower_lr 2e-5 \
     --tune_mm_mlp_adapter True \
-    --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
     --image_aspect_ratio pad \
@@ -32,9 +32,9 @@ python cambrian/train/train_tpu.py \
     --save_strategy "steps" \
     --save_steps 1000 \
     --save_total_limit 1 \
-    --learning_rate 1e-3 \
+    --learning_rate 2e-5 \
     --weight_decay 0. \
-    --warmup_ratio 0.06 \
+    --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --tf32 False \
