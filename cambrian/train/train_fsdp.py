@@ -972,7 +972,7 @@ def transform_dataset(dataset):
     unbatched_dataset = processed_dataset.unbatch()
 
     # shuffle the dataset
-    unbatched_dataset = unbatched_dataset.shuffle(1024)
+    unbatched_dataset = unbatched_dataset.shuffle(8192)
     
     return unbatched_dataset.prefetch(tf.data.AUTOTUNE)
 
