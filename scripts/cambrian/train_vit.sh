@@ -8,7 +8,7 @@ export CKPT_NAME="vit_train" &&
 export CKPT_DIR="gs://us-central2-storage/tensorflow_datasets/cambrian/checkpoints/$CKPT_NAME" &&
 
 python cambrian/train/train_tpu.py \
-    --model_name_or_path microsoft/Phi-3-mini-4k-instruct \
+    --model_name_or_path Qwen/Qwen2.5-0.5B-Instruct \
     --version phi3 \
     --data_path datacomp_dense/owlvitv2_20241114-17 \
     --vision_tower_aux_list '["openai/clip-vit-large-patch14-336"]' \

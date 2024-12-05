@@ -45,7 +45,7 @@ from cambrian import conversation as conversation_lib
 from cambrian.utils import IS_XLA_AVAILABLE
 from cambrian.mm_utils import tokenizer_image_token, tokenizer_image_token_llama3
 from cambrian.train.wandb_nan_alert_callback import NanInfAlertWandbCallback
-from cambrian.model import CambrianLlamaForCausalLM, CambrianMistralForCausalLM
+from cambrian.model import CambrianLlamaForCausalLM, CambrianMistralForCausalLM, CambrianQwen2ForCausalLM
 from cambrian.model.language_model.cambrian_phi3 import CambrianPhi3ForCausalLM
 from PIL import Image
 
@@ -1634,6 +1634,24 @@ def train(INDEX, attn_implementation=None):
                     **bnb_model_from_pretrained_args
             )
             cambrian.model.language_model.phi3.modeling_phi3.Phi3RMSNorm.forward = forward
+        elif "qwen2" in model_name.lower():
+            logger.warning(f"Vision tower, loading CambrianQwen2ForCausalLM: {model_args.model_name_or_path}")
+
+            # replace training_args.fsdp_config.transformer_layer_cls_to_wrap with Qwen2DecoderLayer
+            if (
+                hasattr(training_args, 'fsdp_config') and
+                'transformer_layer_cls_to_wrap' in training_args.fsdp_config.keys()
+            ):
+                logger.warning(f"Replacing training_args.fsdp_config.transformer_layer_cls_to_wrap with Qwen2DecoderLayer. Previous value: {training_args.fsdp_config['transformer_layer_cls_to_wrap']}")
+                training_args.fsdp_config["transformer_layer_cls_to_wrap"] = ["Qwen2DecoderLayer"]
+            model = CambrianQwen2ForCausalLM.from_pretrained(
+                model_name,
+                cache_dir=training_args.cache_dir,
+                do_sample=True,
+                torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
+                **bnb_model_from_pretrained_args
+            )
+            transformers.models.qwen2.modeling_qwen2.Qwen2RMSNorm.forward = forward
         else:
             logger.warning(f"Vision tower, loading CambrianLlamaForCausalLM: {model_args.model_name_or_path}")
             model = CambrianLlamaForCausalLM.from_pretrained(
