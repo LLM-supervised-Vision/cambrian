@@ -11,8 +11,8 @@ python cambrian/train/train_tpu.py \
     --model_name_or_path Qwen/Qwen2.5-0.5B-Instruct \
     --version phi3 \
     --data_path datacomp_dense/owlvitv2_20241114-17 \
-    --vision_tower_aux_list '["openai/clip-vit-large-patch14-336"]' \
-    --vision_tower_aux_token_len_list '[576]' \
+    --vision_tower_aux_list '["openai/clip-vit-base-patch16"]' \
+    --vision_tower_aux_token_len_list '[196]' \
     --image_token_len 576 \
     --image_position 13 \
     --mm_projector_type mlp2x_gelu \
@@ -38,7 +38,7 @@ python cambrian/train/train_tpu.py \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --tf32 False \
-    --model_max_length 128 \
+    --model_max_length 256 \
     --gradient_checkpointing True \
     --dataloader_num_workers 0 \
     --lazy_preprocess True \
