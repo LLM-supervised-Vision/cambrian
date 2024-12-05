@@ -38,7 +38,7 @@ python cambrian/train/train_tpu.py \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --tf32 False \
-    --model_max_length 1024 \
+    --model_max_length 128 \
     --gradient_checkpointing True \
     --dataloader_num_workers 0 \
     --lazy_preprocess True \
