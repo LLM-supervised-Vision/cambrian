@@ -13,7 +13,7 @@ python cambrian/train/train_tpu.py \
     --data_path datacomp_dense/owlvitv2_20241114-17 \
     --vision_tower_aux_list '["openai/clip-vit-base-patch16"]' \
     --vision_tower_aux_token_len_list '[196]' \
-    --image_token_len 576 \
+    --image_token_len 196 \
     --image_position 13 \
     --mm_projector_type mlp2x_gelu \
     --unfreeze_mm_vision_tower True \
