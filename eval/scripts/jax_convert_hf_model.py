@@ -7,7 +7,9 @@ import numpy as np
 
 import transformers
 from huggingface_hub import login
-login(token="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")
+import os
+hf_token = os.getenv('HF_TOKEN')
+login(token=hf_token)
 
 def convert_void_array(arr):
     """Convert void array to float32."""

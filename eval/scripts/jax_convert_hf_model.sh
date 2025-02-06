@@ -9,7 +9,7 @@ fi
 GCS_PATH=$1
 
 # Set evaluation directory
-EVAL_DIR=$(dirname $(dirname $(dirname $(realpath $0))))
+EVAL_DIR=$(dirname $(dirname $(dirname $(dirname $(realpath $0)))))
 JAX_CKPT_DIR="$EVAL_DIR/jax_ckpts"
 
 # Create directories if they don't exist
