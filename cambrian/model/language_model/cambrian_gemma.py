@@ -28,21 +28,21 @@ from ..cambrian_arch import CambrianMetaModel, CambrianMetaForCausalLM
 from cambrian.utils import IS_XLA_AVAILABLE
 
 
-class CambrianConfig(GemmaConfig):
+class CambrianGemmaConfig(GemmaConfig):
     model_type = "cambrian_gemma"
 
     debug = "debug"
 
 
 class CambrianGemmaModel(CambrianMetaModel, GemmaModel):
-    config_class = CambrianConfig
+    config_class = CambrianGemmaConfig
 
     def __init__(self, config: GemmaConfig):
         super(CambrianGemmaModel, self).__init__(config)
 
 
 class CambrianGemmaForCausalLM(GemmaForCausalLM, CambrianMetaForCausalLM):
-    config_class = CambrianConfig
+    config_class = CambrianGemmaConfig
 
     def __init__(self, config, spmd_debug=None, spmd_mesh=None, spmd_fsdp_sharding=None):
         super(GemmaForCausalLM, self).__init__(config)
@@ -51,7 +51,7 @@ class CambrianGemmaForCausalLM(GemmaForCausalLM, CambrianMetaForCausalLM):
         config.spmd_mesh = spmd_mesh
         config.spmd_fsdp_sharding = spmd_fsdp_sharding
         self.model = CambrianGemmaModel(config)
-        self.pretraining_tp = config.pretraining_tp
+        # self.pretraining_tp = config.pretraining_tp
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         self.spmd_mesh = spmd_mesh
@@ -176,5 +176,5 @@ class CambrianGemmaForCausalLM(GemmaForCausalLM, CambrianMetaForCausalLM):
             inputs['image_sizes'] = image_sizes
         return inputs
 
-AutoConfig.register("cambrian_gemma", CambrianConfig)
-AutoModelForCausalLM.register(CambrianConfig, CambrianGemmaForCausalLM)
+AutoConfig.register("cambrian_gemma", CambrianGemmaConfig)
+AutoModelForCausalLM.register(CambrianGemmaConfig, CambrianGemmaForCausalLM)
