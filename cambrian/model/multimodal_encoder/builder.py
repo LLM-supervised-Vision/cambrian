@@ -89,7 +89,8 @@ def build_vision_tower_aux_list(vision_tower_cfg, **kwargs):
     vision_tower_aux_list = []
     for vision_tower_aux_name, vision_tower_aux_token_len in zip(vision_tower_aux_name_list, vision_tower_aux_token_len_list):
         config = copy.deepcopy(vision_tower_cfg)
-        vision_tower_aux_name += "-interp{}".format(vision_tower_aux_token_len)
+        if not vision_tower_aux_name.endswith(".npz"):
+            vision_tower_aux_name += "-interp{}".format(vision_tower_aux_token_len)
         if "maws" in vision_tower_aux_name.lower():
             logger.info(f"Loading **MAWS** Vision Tower: {vision_tower_aux_name}")
             vision_tower_aux_list.append(MawsVisionTower(vision_tower_aux_name, args=config, **kwargs))
