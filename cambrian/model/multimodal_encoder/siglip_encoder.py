@@ -161,7 +161,7 @@ class SiglipVisionTower(ClipVisionTower):
                     'timm_model_name': 'vit_base_patch16_siglip_224', 
                     'timm_model_pretrained': False, 
                     'timm_pool': '', 
-                    'timm_proj': None, # 'none', 'linear'
+                    'timm_proj': 'none', # 'none', 'linear'
                 }, 
                 'embed_dim': self._hidden_size,
             }

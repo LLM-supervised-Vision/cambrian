@@ -81,6 +81,7 @@ class CambrianGemmaForCausalLM(GemmaForCausalLM, CambrianMetaForCausalLM):
         images: Optional[torch.FloatTensor] = None,
         image_sizes: Optional[List[List[int]]] = None,
         return_dict: Optional[bool] = None,
+        cache_position: Optional[int] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
         if inputs_embeds is None:
@@ -90,7 +91,11 @@ class CambrianGemmaForCausalLM(GemmaForCausalLM, CambrianMetaForCausalLM):
                 attention_mask,
                 past_key_values,
                 inputs_embeds,
-                labels
+                labels,
+                _, # vision_tower_aux_feature_list,
+                _, # vision_tower_aux_attention_masks_list,
+                _, # final_vision_feature_size,
+                _ # global_context_feature
             ) = self.prepare_inputs_labels_for_multimodal(
                 input_ids,
                 position_ids,
@@ -118,7 +123,8 @@ class CambrianGemmaForCausalLM(GemmaForCausalLM, CambrianMetaForCausalLM):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict
+            return_dict=return_dict,
+            cache_position=cache_position
         )
 
         return output
@@ -143,7 +149,11 @@ class CambrianGemmaForCausalLM(GemmaForCausalLM, CambrianMetaForCausalLM):
                 attention_mask,
                 _,
                 inputs_embeds,
-                _
+                _,
+                _, # vision_tower_aux_feature_list,
+                _, # vision_tower_aux_attention_masks_list,
+                _, # final_vision_feature_size,
+                _ # global_context_feature
             ) = self.prepare_inputs_labels_for_multimodal(
                 inputs,
                 position_ids,
