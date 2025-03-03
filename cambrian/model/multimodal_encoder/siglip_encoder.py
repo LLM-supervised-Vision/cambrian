@@ -142,9 +142,9 @@ class SiglipVisionTower(ClipVisionTower):
             self._interp_size = interp
         else:
             self.vision_tower_name = vision_tower_name
-            self._image_size = 224
+            self._image_size = args.mm_image_size
             self._interp_size = None
-            self._hidden_size = 2048
+            self._hidden_size = args.mm_hidden_size
         if not self.delay_load:
             self.load_model()
         elif self.unfreeze_mm_vision_tower:
