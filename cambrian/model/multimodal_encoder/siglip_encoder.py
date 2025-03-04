@@ -164,6 +164,10 @@ class SiglipVisionTower(ClipVisionTower):
                     'timm_proj': 'none', # 'none', 'linear'
                 }, 
                 'embed_dim': self._hidden_size,
+                'image_mean': [0.5,0.5,0.5],
+                'image_std': [0.5,0.5,0.5],
+                'image_interpolation': 'bicubic',
+                'image_resize_mode': 'squash',
             }
             clip_model, processor = open_clip.create_model_from_pretrained(
                 "ViT-B-16-SigLIP",
@@ -179,8 +183,7 @@ class SiglipVisionTower(ClipVisionTower):
         self._hidden_size = self.vision_tower.embed_dim
         self._image_size = self.vision_tower.patch_embed.img_size[0]
         self._patch_size = self.vision_tower.patch_embed.patch_size[0]
-        self.image_processor = ProcessorWrapper(processor, height=self._image_size, width=self._image_size)
-
+        self.image_processor = ProcessorWrapper(processor, height=self._image_size, width=self._image_size, image_mean=[0.5,0.5,0.5])
         self.vision_tower.requires_grad_(self.unfreeze_mm_vision_tower)
         self.is_loaded = True
 

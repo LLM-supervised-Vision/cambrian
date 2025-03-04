@@ -361,6 +361,7 @@ class CambrianMetaForCausalLM(ABC):
         # only needed for sva
         vision_tower_aux_feature_list_final = None
         vision_tower_aux_attention_masks_list_final = None
+        final_size = None
         global_context_feature_final = None
 
         image_aux_features_list = self.encode_images(image_aux_list)
@@ -418,7 +419,8 @@ class CambrianMetaForCausalLM(ABC):
             ), dim=2)
             image_features = image_features.flatten(1, 2)
             final_size = [(final_height, final_width)]*bs
-
+        elif self.model.config.architectures == ['CambrianGemmaForCausalLM']:
+            image_features /= self.model.config.hidden_size**0.5
         else:
             image_features = image_features.view(bs, final_height, final_width, -1)
             image_features_unpadded = []
