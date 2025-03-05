@@ -28,6 +28,7 @@ from cambrian.model.language_model.cambrian_mistral import CambrianMistralForCau
 
 def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, load_4bit=False, device_map="auto", device="cuda", use_flash_attn=False, **kwargs):
     kwargs = {"device_map": device_map, **kwargs}
+    image_processor = None
 
     if device != "cuda":
         kwargs['device_map'] = {"": device}
@@ -150,11 +151,35 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             if 'mpt' in model_name.lower():
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
                 model = AutoModelForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, trust_remote_code=True, **kwargs)
+            elif 'paligemma' in model_name.lower():
+                from transformers import PaliGemmaForConditionalGeneration, PaliGemmaProcessor, PaliGemmaConfig
+                # model = PaliGemmaForConditionalGeneration.from_pretrained(model_path, **kwargs)
+                model = EvalCompatiblePaliGemma.from_pretrained(model_path, **kwargs)
+
+                processor = PaliGemmaProcessor.from_pretrained(model_path, use_fast=False)
+                tokenizer = processor.tokenizer
+                image_processor = [processor.image_processor]
+                image_processor[0].crop_size = {"height": 224, "width": 224}
+
+                model.config.vocab_size = 256_192
+                model.config.mm_vision_tower_aux_list = [os.path.join(model_path, 'bv_siglip_gemma_stage_0_pt.npz'),]
+                model.config.mm_vision_tower_aux_token_len_list = [196,]
+
+                model.config.mm_use_im_start_end = False
+                model.config.mm_use_im_patch_token = False
+
+                model.config.mm_vision_select_feature = "patch"
+                model.config.mm_vision_select_layer = -1
+
+                model.config.query_num_list = None
+                model.config.mm_projector_type = 'linear'
+                model.config.mm_hidden_size = 768
+                model.config.mm_image_size = 224
+                model.config.image_token_len = 196
             else:
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
                 model = AutoModelForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
 
-    image_processor = None
 
     if 'cambrian' in model_name.lower():
         mm_use_im_start_end = getattr(model.config, "mm_use_im_start_end", False)
@@ -180,3 +205,93 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         context_len = 2048
 
     return tokenizer, model, image_processor, context_len
+
+
+
+
+
+
+from transformers import PaliGemmaForConditionalGeneration
+import torch
+
+class EvalCompatiblePaliGemma(PaliGemmaForConditionalGeneration):
+    """
+    A subclass of PaliGemmaForConditionalGeneration that overrides the generate method
+    to make it compatible with the inputs provided by the evaluation script.
+    """
+    
+    def generate(
+        self,
+        input_ids=None,
+        images=None,
+        image_sizes=None,
+        attention_mask=None,
+        position_ids=None,
+        past_key_values=None,
+        cache_position=None,
+        inputs_embeds=None,
+        do_sample=None,
+        temperature=None,
+        top_p=None,
+        num_beams=None,
+        max_new_tokens=None,
+        use_cache=None,
+        **kwargs
+    ):
+        """
+        Overridden generate method that accepts 'images' parameter 
+        instead of 'pixel_values' expected by the parent class.
+        """
+        # Convert images to pixel_values if needed
+        pixel_values = None
+        if images is not None:
+            # The model expects pixel_values instead of images
+            pixel_values = images[0]
+
+
+        sequence_to_replace = torch.tensor([-200, 108], device=input_ids.device)
+        sequence_length = len(sequence_to_replace)
+
+        # Find the starting index of the sequence
+        start_index = None
+        for i in range(len(input_ids[0]) - sequence_length + 1):
+            if torch.equal(input_ids[0][i:i + sequence_length], sequence_to_replace):
+                start_index = i
+                break
+
+        if start_index is None:
+            raise ValueError("Sequence [-200, 108] not found in input_ids.")
+
+        # Step 2: Create the replacement tensor
+        replacement = torch.cat([
+            torch.full((self.config.image_token_len,), self.config.image_token_index, dtype=input_ids.dtype, device=input_ids.device),
+            torch.tensor([self.config.bos_token_id], dtype=input_ids.dtype, device=input_ids.device)
+        ])
+
+        # Step 3: Reconstruct the tensor
+        new_input_ids = torch.cat([
+            input_ids[:, :start_index],       # Part before [-200, 108]
+            replacement.unsqueeze(0),         # Replacement sequence
+            input_ids[:, start_index + sequence_length:]  # Part after [-200, 108]
+        ], dim=1)
+
+        # Call the parent's generate method with the converted inputs
+        full_outputs = super().generate(
+            input_ids=new_input_ids,
+            pixel_values=pixel_values,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            # past_key_values=past_key_values,
+            cache_position=cache_position,
+            # inputs_embeds=inputs_embeds,
+            do_sample=do_sample,
+            temperature=temperature,
+            top_p=top_p,
+            num_beams=num_beams,
+            max_new_tokens=max_new_tokens,
+            use_cache=use_cache,
+            **kwargs
+        )
+
+        new_input_length = new_input_ids.shape[1]
+        return full_outputs[:, new_input_length:]
