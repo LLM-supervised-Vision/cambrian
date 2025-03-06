@@ -7,10 +7,14 @@ GDRIVE_NAME="gdrive"
 
 # List of MLLM keys
 MLLM_KEYS=(
-    "stage_0_pt" "stage_0_sft"
-    "stage_1_pt" "stage_1_sft"
-    "stage_2_pt" "stage_2_sft"
-    "stage_3_pt" "stage_3_sft"
+    # "stage_0_pt" "stage_0_sft"
+    # "stage_1_pt" "stage_1_sft"
+    # "stage_2_pt" "stage_2_sft"
+    # "stage_3_pt" "stage_3_sft"
+    
+    "stage_0_curriculum" "stage_0_no-curriculum"
+    "stage_1_curriculum" "stage_1_no-curriculum"
+    "stage_2_curriculum" "stage_2_no-curriculum"
 )
 
 # Loop through each key and perform rclone

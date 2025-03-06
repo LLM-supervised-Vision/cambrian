@@ -36,7 +36,7 @@ def tabulate_results(eval_dir, experiment_csv_fname, out_pivot_fname, out_all_re
         'ocrbench',
         'mmstar',
         'realworldqa',
-        'qbench',
+        # 'qbench',
         'blink',
         'mmvp',
         'vstar',
