@@ -21,7 +21,7 @@ echo "Running consolidation with checkpoint: $checkpoint"
 
 export SCRATCH=/scratch/${USER}
 export CHECKPOINT_DIR=${CHECKPOINT_DIR:-$SCRATCH/checkpoints}
-export EVAL_DIR=${EVAL_DIR:-$SCRATCH/workspace/mllm_eval_hpc}
+export EVAL_DIR=${EVAL_DIR:-$SCRATCH/workspace/cambrian/eval}
 
 
 singularity exec --bind /scratch --nv --overlay $SCRATCH/overlay/cambrian.ext3:ro $SCRATCH/overlay/cuda12.1.1-cudnn8.9.0-devel-ubuntu22.04.2.sif /bin/bash -c "

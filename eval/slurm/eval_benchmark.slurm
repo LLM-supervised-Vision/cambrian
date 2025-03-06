@@ -54,7 +54,7 @@ echo "Conversation mode: $conv_mode"
 
 export SCRATCH=/scratch/${USER}
 export CHECKPOINT_DIR=${CHECKPOINT_DIR:-$SCRATCH/checkpoints}
-export EVAL_DIR=${EVAL_DIR:-$SCRATCH/workspace/mllm_eval_hpc}
+export EVAL_DIR=${EVAL_DIR:-$SCRATCH/workspace/cambrian/eval}
 
 
 ################# Run the benchmark #################

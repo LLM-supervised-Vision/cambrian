@@ -171,7 +171,7 @@ benchmarks=(
     vstar
     synthdog
     # vision
-    qbench
+    # qbench
     blink
     # CV-Bench
     omni

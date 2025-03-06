@@ -64,7 +64,7 @@ export HF_HOME=$SCRATCH/.cache/huggingface
 export HF_HUB_CACHE=$SCRATCH/.cache/huggingface/hub
 export HF_DATASETS_CACHE=$SCRATCH/.cache/huggingface/datasets
 
-export EVAL_DIR=$SCRATCH/mllm_eval_hpc # path to this project directory
+export EVAL_DIR=$SCRATCH/cambrian/eval # path to this project directory
 ```
 
 > alternatively to setting the HF vars, you can create a dir in $SCRATCH and symlink it to the default cache dir
