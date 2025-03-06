@@ -44,7 +44,9 @@ def compute_metrics(jsonl_file, output_file, csv_file, extra_outdir=None):
                     category_collect[category] = {}
                     category_collect_count[category] = {}
 
-                answer = data.get('prediction', '').lower().split()[0].rstrip('.:,')
+                # answer = data.get('prediction', '').lower().split()[0].rstrip('.:,')
+                answer = data.get('prediction', '').lower().split()
+                answer = answer[0].rstrip('.:,') if len(answer)>0 else answer.rstrip('.:,')
                 if "(A)" in answer:
                     answer = "a"
                 elif "(B)" in answer:

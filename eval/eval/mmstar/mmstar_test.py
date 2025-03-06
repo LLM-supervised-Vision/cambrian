@@ -31,7 +31,9 @@ def compute_metrics(jsonl_file, output_file, csv_file, extra_outdir=None):
             for line in file:
                 total += 1.0
                 data = json.loads(line)
-                answer = data.get('answer', '').lower().split()[0].rstrip('.:,')
+                # answer = data.get('answer', '').lower().split()[0].rstrip('.:,')
+                answer = data.get('answer', '').lower().split()
+                answer = answer[0].rstrip('.:,') if len(answer)>0 else answer.rstrip('.:,')
                 if "(A)" in answer:
                     answer = "a"
                 elif "(B)" in answer:
