@@ -279,8 +279,10 @@ class EvalCompatiblePaliGemma(PaliGemmaForConditionalGeneration):
 
         # from transformers import PaliGemmaProcessor
         # processor = PaliGemmaProcessor.from_pretrained(self.config._name_or_path)
-
-        # print(f"new input_ids: {new_input_ids[:,self.config.image_token_len:]} \nwhich means: {processor.batch_decode(new_input_ids[:,self.config.image_token_len:], skip_special_tokens=True)}")
+        # system_prompt = new_input_ids[:, :start_index]
+        # specific_prompt = new_input_ids[:,start_index+self.config.image_token_len:]
+        # print(f"system_prompt: {system_prompt} \nwhich means: {processor.batch_decode(system_prompt, skip_special_tokens=True)}")
+        # print(f"specific_prompt: {specific_prompt} \nwhich means: {processor.batch_decode(specific_prompt, skip_special_tokens=True)}")
 
         # Call the parent's generate method with the converted inputs
         full_outputs = super().generate(
