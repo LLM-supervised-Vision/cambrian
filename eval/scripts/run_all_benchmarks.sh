@@ -11,26 +11,26 @@ question_extension="$4"
 
 benchmarks=(
     gqa
-    vizwiz
-    scienceqa
-    textvqa
-    pope
-    mme
-    mmbench_en
-    mmbench_cn
-    seed
-    mmvet
-    mmmu
-    mathvista
-    ai2d
-    chartqa
-    docvqa
-    infovqa
-    stvqa
-    ocrbench
-    mmstar
-    realworldqa
-    synthdog
+    # vizwiz
+    # scienceqa
+    # textvqa
+    # pope
+    # mme
+    # mmbench_en
+    # mmbench_cn
+    # seed
+    # mmvet
+    # mmmu
+    # mathvista
+    # ai2d
+    # chartqa
+    # docvqa
+    # infovqa
+    # stvqa
+    # ocrbench
+    # mmstar
+    # realworldqa
+    # synthdog
 )
 
 # Create a directory for checkpoint files if it doesn't exist
@@ -49,7 +49,10 @@ else
     completed_benchmarks=()
 fi
 
-timestamp=$(date +%Y%m%d-%H%M%S)
+# Record start time in seconds since epoch
+start_time=$(date +%s)
+timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+
 for benchmark in "${benchmarks[@]}"; do
     if [[ " ${completed_benchmarks[@]} " =~ " $benchmark " ]]; then
         echo "Skipping completed benchmark: $benchmark"
@@ -68,10 +71,15 @@ for benchmark in "${benchmarks[@]}"; do
     # Append the completed benchmark to the checkpoint file
     echo "$benchmark" >> "$checkpoint_file"
 
-    cur_timestamp=$(date +%Y%m%d-%H%M%S)
-    echo "Elapsed minutes: $(( ($(date -d $cur_timestamp +%s) - $(date -d $timestamp +%s)) / 60 ))"
+    # Calculate elapsed time properly
+    current_time=$(date +%s)
+    elapsed_minutes=$(( (current_time - start_time) / 60 ))
+    echo "Elapsed minutes: $elapsed_minutes"
     echo ""
 done
 
+# Calculate final elapsed time
+end_time=$(date +%s)
+total_elapsed_minutes=$(( (end_time - start_time) / 60 ))
 echo "Finished all benchmarks"
-echo "Elapsed minutes: $(( ($(date -d $cur_timestamp +%s) - $(date -d $timestamp +%s)) / 60 ))"
+echo "Total elapsed minutes: $total_elapsed_minutes"
