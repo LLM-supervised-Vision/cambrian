@@ -4,7 +4,6 @@
 # google/paligemma-3b-pt-224
 # google/paligemma-3b-pt-896
 # google/paligemma-3b-mix-224
-# google/paligemma-3b-mix-896
 # google/paligemma2-3b-pt-224
 # google/paligemma2-3b-pt-896
 # google/paligemma2-10b-pt-224
@@ -18,8 +17,7 @@
 # /data/austin/bv2cambrian_ckpts/hf_paligemma-stage_1_sft
 
 device=$1
-model_key=$2
-model_path=/data/austin/bv2cambrian_ckpts/hf_paligemma-$model_key
+model_path=$2
 question_extension="Give the short answer directly."
 
 # Run the evaluation script
