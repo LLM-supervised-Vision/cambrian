@@ -3,8 +3,11 @@ set -e
 
 echo "> run_all_benchmarks.sh $@"
 
-ckpt="$1"
-conv_mode="$2"
+# Parse arguments
+cuda_device="$1"
+ckpt="$2"
+conv_mode="$3"
+question_extension="$4"
 
 benchmarks=(
     gqa
@@ -54,8 +57,13 @@ for benchmark in "${benchmarks[@]}"; do
     fi
 
     echo "Running benchmark: $benchmark"
-    bash $script_dir/run_benchmark.sh --benchmark $benchmark --ckpt $ckpt --conv_mode $conv_mode
+    CUDA_VISIBLE_DEVICES=$cuda_device bash $script_dir/run_benchmark.sh \
+        --benchmark $benchmark \
+        --ckpt $ckpt \
+        --conv_mode $conv_mode \
+        --question_extension "$question_extension"
     echo "Finished benchmark: $benchmark"
+    wait
 
     # Append the completed benchmark to the checkpoint file
     echo "$benchmark" >> "$checkpoint_file"

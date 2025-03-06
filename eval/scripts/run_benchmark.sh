@@ -24,6 +24,10 @@ while [[ $# -gt 0 ]]; do
         conv_mode="$2"
         shift 2
         ;;
+    --question_extension)
+        question_extension="$2"
+        shift 2
+        ;;
     *)
         echo "Unknown argument: $1"
         exit 1
@@ -98,7 +102,8 @@ for IDX in $(seq 0 $((CHUNKS-1))); do
             --num_chunks "$CHUNKS" \
             --chunk_idx "$IDX" \
             --answers_file "$answers_file" \
-            --conv_mode "$conv_mode"
+            --conv_mode "$conv_mode" \
+            --question_extension "$question_extension"
     } &
 done
 

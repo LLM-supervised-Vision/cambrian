@@ -153,29 +153,30 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                 model = AutoModelForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, trust_remote_code=True, **kwargs)
             elif 'paligemma' in model_name.lower():
                 from transformers import PaliGemmaForConditionalGeneration, PaliGemmaProcessor, PaliGemmaConfig
+                kwargs['device_map'] = 'cuda'
                 # model = PaliGemmaForConditionalGeneration.from_pretrained(model_path, **kwargs)
                 model = EvalCompatiblePaliGemma.from_pretrained(model_path, **kwargs)
-
-                processor = PaliGemmaProcessor.from_pretrained(model_path, use_fast=False)
-                tokenizer = processor.tokenizer
-                image_processor = [processor.image_processor]
-                image_processor[0].crop_size = {"height": 224, "width": 224}
-
-                model.config.vocab_size = 256_192
-                model.config.mm_vision_tower_aux_list = [os.path.join(model_path, 'bv_siglip_gemma_stage_0_pt.npz'),]
-                model.config.mm_vision_tower_aux_token_len_list = [196,]
+                # model.config.vocab_size = model.config.text_config.vocab_size
+                # model.config.mm_vision_tower_aux_list = [os.path.join(model_path, 'bv_siglip_gemma_stage_0_pt.npz'),]
+                # model.config.mm_vision_tower_aux_token_len_list = [196,]
 
                 model.config.mm_use_im_start_end = False
                 model.config.mm_use_im_patch_token = False
 
-                model.config.mm_vision_select_feature = "patch"
-                model.config.mm_vision_select_layer = -1
+                # model.config.mm_vision_select_feature = "patch"
+                # model.config.mm_vision_select_layer = -1
 
-                model.config.query_num_list = None
-                model.config.mm_projector_type = 'linear'
-                model.config.mm_hidden_size = 768
-                model.config.mm_image_size = 224
-                model.config.image_token_len = 196
+                # model.config.query_num_list = None
+                # model.config.mm_projector_type = 'linear'
+                # model.config.mm_hidden_size = model.config.vision_config.hidden_size
+                model.config.image_token_len = model.config.vision_config.num_image_tokens
+                model.config.mm_image_size = model.vision_tower.vision_model.embeddings.patch_embedding.kernel_size[0]*int(model.config.image_token_len**0.5)
+
+                processor = PaliGemmaProcessor.from_pretrained(model_path)
+                tokenizer = processor.tokenizer
+                image_processor = [processor.image_processor]
+                image_processor[0].crop_size = {"height": model.config.mm_image_size, "width": model.config.mm_image_size}
+
             else:
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
                 model = AutoModelForCausalLM.from_pretrained(model_path, low_cpu_mem_usage=True, **kwargs)
@@ -205,9 +206,6 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         context_len = 2048
 
     return tokenizer, model, image_processor, context_len
-
-
-
 
 
 
@@ -248,6 +246,10 @@ class EvalCompatiblePaliGemma(PaliGemmaForConditionalGeneration):
             # The model expects pixel_values instead of images
             pixel_values = images[0]
 
+        # Replace token 109 (\n\n) with 108 at the end if present
+        assert input_ids.size(0) == 1, "Batch size must be 1"
+        if input_ids[0][-1] == 109:
+            input_ids[0][-1] = 108
 
         sequence_to_replace = torch.tensor([-200, 108], device=input_ids.device)
         sequence_length = len(sequence_to_replace)
@@ -275,15 +277,18 @@ class EvalCompatiblePaliGemma(PaliGemmaForConditionalGeneration):
             input_ids[:, start_index + sequence_length:]  # Part after [-200, 108]
         ], dim=1)
 
+        # from transformers import PaliGemmaProcessor
+        # processor = PaliGemmaProcessor.from_pretrained(self.config._name_or_path)
+
+        # print(f"new input_ids: {new_input_ids[:,self.config.image_token_len:]} \nwhich means: {processor.batch_decode(new_input_ids[:,self.config.image_token_len:], skip_special_tokens=True)}")
+
         # Call the parent's generate method with the converted inputs
         full_outputs = super().generate(
             input_ids=new_input_ids,
             pixel_values=pixel_values,
             attention_mask=attention_mask,
             position_ids=position_ids,
-            # past_key_values=past_key_values,
             cache_position=cache_position,
-            # inputs_embeds=inputs_embeds,
             do_sample=do_sample,
             temperature=temperature,
             top_p=top_p,

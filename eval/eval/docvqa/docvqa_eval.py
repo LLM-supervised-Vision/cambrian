@@ -111,6 +111,13 @@ def eval_model(args):
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
 
+        def inspect():
+            print(f"question: {line['question']}")
+            print(f"outputs: {outputs}")
+            line['image'].save('tmp_img.png')
+        # inspect()
+        # import pdb; pdb.set_trace()
+
         ans_file.write(json.dumps({
             "questionId": line["questionId"],
             "prompt": prompt,
