@@ -11,26 +11,27 @@ question_extension="$4"
 
 benchmarks=(
     gqa
-    vizwiz
+    # vizwiz
     scienceqa
     textvqa
-    pope
+    # pope
     mme
     mmbench_en
-    mmbench_cn
-    seed
+    # mmbench_cn
     mmvet
     mmmu
     mathvista
     ai2d
     chartqa
     docvqa
-    infovqa
-    stvqa
+    # infovqa
+    # stvqa
     ocrbench
     mmstar
     realworldqa
-    synthdog
+    mmvp
+    # synthdog
+    seed
 )
 
 # Create a directory for checkpoint files if it doesn't exist

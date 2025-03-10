@@ -2,7 +2,7 @@
 
 # Base directory and keys
 HF_DIR_KEY="hf_paligemma"
-HF_PALIGEMMA_CKPT_DIR="/scratch/zw2526/workspace"
+HF_PALIGEMMA_CKPT_DIR="/data/austin"
 GDRIVE_NAME="gdrive"
 
 # List of MLLM keys
@@ -12,9 +12,11 @@ MLLM_KEYS=(
     # "stage_2_pt" "stage_2_sft"
     # "stage_3_pt" "stage_3_sft"
     
-    "stage_0_curriculum" "stage_0_no-curriculum"
-    "stage_1_curriculum" "stage_1_no-curriculum"
-    "stage_2_curriculum" "stage_2_no-curriculum"
+    # "stage_0_curriculum" "stage_0_no-curriculum"
+    # "stage_1_curriculum" "stage_1_no-curriculum"
+    # "stage_2_curriculum" "stage_2_no-curriculum"
+
+    stage_0_sft_paligemma-init
 )
 
 # Loop through each key and perform rclone

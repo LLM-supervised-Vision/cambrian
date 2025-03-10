@@ -21,16 +21,16 @@ model_path=$2
 question_extension="Give the short answer directly."
 
 
-# # Run the evaluation script
-# CUDA_VISIBLE_DEVICES=$device bash /data/austin/cambrian/eval/scripts/run_all_benchmarks.sh \
-#     $device \
-#     "$model_path" \
-#     plain \
-#     "$question_extension"
+# Run the evaluation script
+CUDA_VISIBLE_DEVICES=$device bash /data/austin/cambrian/eval/scripts/run_all_benchmarks.sh \
+    $device \
+    "$model_path" \
+    plain \
+    "$question_extension"
 
 
 
-# Run the evaluation script over HPC GREENE
-bash /scratch/zw2526/workspace/cambrian/eval/slurm/submit_all_benchmarks_parallel.bash \
-    --ckpt "$model_path" \
-    --conv_mode "plain"
+# # Run the evaluation script over HPC GREENE
+# bash /scratch/zw2526/workspace/cambrian/eval/slurm/submit_all_benchmarks_parallel.bash \
+#     --ckpt "$model_path" \
+#     --conv_mode "plain"
