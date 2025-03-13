@@ -16,7 +16,21 @@ MLLM_KEYS=(
     # "stage_1_curriculum" "stage_1_no-curriculum"
     # "stage_2_curriculum" "stage_2_no-curriculum"
 
-    stage_0_sft_paligemma-init
+    # stage_0_sft_paligemma-init
+    # 1_sft_paligemma-PT-PT_paligemma-PT-PT_basic_clean
+    1_sft_siglip-PT_G2B-fresh-fresh_baisc_clean
+
+    # 1_sft_random-PT_G2B-fresh-fresh_advanced_clean
+    # 1_sft_random-PT_G2B-fresh-fresh_basic_clean
+    # 1_sft_random-PT_G2B-fresh-PT_basic_ann
+
+    # 0_sft_siglip-PT-PT_G2B-fresh-fresh_basic_clean
+    # 0_sft_siglip-PT_G2B-fresh-fresh_baisc_clean_all-loss
+    # 0_sft_random-PT-PT_G2B-fresh-fresh-basic_clean
+
+    # 0_pt_ocr-init 0_sft_ocr-init
+    # 1_pt_ocr-init 1_sft_ocr-init
+
 )
 
 # Loop through each key and perform rclone

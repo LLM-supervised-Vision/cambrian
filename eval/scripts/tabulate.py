@@ -11,34 +11,71 @@ def tabulate_results(eval_dir, experiment_csv_fname, out_pivot_fname, out_all_re
 
     print(f"eval_dir: {eval_dir}")
 
+    # evals_order = [
+    #     ## llava
+    #     # 'vqav2',
+    #     'gqa',
+    #     'vizwiz',
+    #     'scienceqa',
+    #     'textvqa',
+    #     'pope',
+    #     'mme',
+    #     'mmbench_en',
+    #     'mmbench_cn',
+    #     'seed',
+    #     # 'llava_w',
+    #     # 'mmvet', # submission
+    #     ## Addtl
+    #     'mmmu',
+    #     'mathvista',
+    #     'ai2d',
+    #     'chartqa',
+    #     # 'docvqa', # submission
+    #     # 'infovqa', # submission
+    #     # 'stvqa', # submission
+    #     'ocrbench',
+    #     'mmstar',
+    #     'realworldqa',
+    #     # 'qbench',
+    #     # 'blink',
+    #     'mmvp',
+    #     # 'vstar',
+    #     # 'ade',
+    #     # 'omni',
+    #     # 'coco'
+    #     # 'synthdog', # seems broken?
+    # ]
     evals_order = [
-        ## llava
-        # 'vqav2',
-        'gqa',
-        'vizwiz',
-        'scienceqa',
-        'textvqa',
-        'pope',
+        ## General
         'mme',
         'mmbench_en',
-        'mmbench_cn',
         'seed',
-        # 'llava_w',
-        # 'mmvet', # submission
-        ## Addtl
+        'gqa',
+        ## Knowledge
+        'scienceqa',
         'mmmu',
         'mathvista',
         'ai2d',
+        ## OCR & Chart
         'chartqa',
-        # 'docvqa', # submission
+        'ocrbench',
+        'textvqa',
+        'docvqa', # submission
+        ## Vision-Centric
+        'mmvp',
+        'realworldqa',
+        ## Non-Cambrian
+        'mmstar',
+        'vizwiz',
+        'pope',
+        # 'mmbench_cn',
+        # 'llava_w',
+        # 'mmvet', # submission
+        ## Addtl
         # 'infovqa', # submission
         # 'stvqa', # submission
-        'ocrbench',
-        'mmstar',
-        'realworldqa',
         # 'qbench',
         # 'blink',
-        'mmvp',
         # 'vstar',
         # 'ade',
         # 'omni',
