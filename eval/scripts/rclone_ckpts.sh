@@ -18,10 +18,26 @@ MLLM_KEYS=(
 
     # stage_0_sft_paligemma-init
     # 1_sft_paligemma-PT-PT_paligemma-PT-PT_basic_clean
-    1_sft_siglip-PT_G2B-fresh-fresh_baisc_clean
+    # 1_sft_siglip-PT_G2B-fresh-fresh_baisc_clean
+
+    # 0_SFT_freeze_bs512_1e-5-F_2e-5-F_2e-5
+    # 0_SFT_freeze_bs512_1e-5-F_2e-5_2e-5
+    # 0_SFT_unfreeze_bs512_1e-5_2e-5_2e-5
+    0_SFT_freeze_bs4k_1e-5-F_2e-5-F_2e-5
+    0_SFT_freeze_bs4k_1e-5-F_2e-5_2e-5
+    0_SFT_unfreeze_bs4k_1e-5_2e-5_2e-5
+
+    # 1_SFT_bs16k_1e-5_2e-5_2e-5_10ep_single
+    # 1_SFT_bs16k_1e-5_2e-5_2e-5_1ep_single
+    # 1_SFT_bs16k_1e-5_2e-5_2e-5_4ep_multi_txtlen256
+    # 1_SFT_bs16k_1e-5_2e-5_2e-5_1ep_multi_txtlen128
+    # 1_SFT_bs512_1e-5_2e-5_2e-5_1ep_multi_txtlen128
+    # 1_SFT_bs4k_1e-5_2e-5_2e-5_1ep_multi_txtlen256
+    # 1_SFT_bs512_1e-5_2e-5_2e-5_1ep_multi_txtlen256
 
     # 1_sft_random-PT_G2B-fresh-fresh_advanced_clean
     # 1_sft_random-PT_G2B-fresh-fresh_basic_clean
+    # 2_sft_random-PT_G2B-fresh-fresh_basic_clean
     # 1_sft_random-PT_G2B-fresh-PT_basic_ann
 
     # 0_sft_siglip-PT-PT_G2B-fresh-fresh_basic_clean
