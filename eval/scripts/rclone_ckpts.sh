@@ -7,6 +7,13 @@ GDRIVE_NAME="gdrive"
 
 # List of MLLM keys
 MLLM_KEYS=(
+    0_sft_p2-3b-224
+
+    # 2_sft_p3b224_wd0.0_re-init
+    # 2_sft_p3b224_wd0.0_inherit
+    # 3_sft_p3b224_wd0.0_re-init
+    # 3_sft_p3b224_wd0.0_inherit
+
     # "stage_0_pt" "stage_0_sft"
     # "stage_1_pt" "stage_1_sft"
     # "stage_2_pt" "stage_2_sft"
@@ -30,6 +37,7 @@ MLLM_KEYS=(
     # 0_sft_p3b
     # 1_sft_p3b
     # 2_sft_p3b
+    # 3_sft_p3b
 
     # 1_SFT_bs16k_1e-5_2e-5_2e-5_10ep_single
     # 1_SFT_bs16k_1e-5_2e-5_2e-5_10ep_wd0_single
@@ -42,8 +50,8 @@ MLLM_KEYS=(
     # 1_SFT_bs512_1e-5_2e-5_2e-5_wd0_1ep_multi_txtlen256
     # 1_SFT_bs512_5e-6_1e-5_1e-5_1ep_multi_txtlen256
 
-    1_combined_bs4k_1ep-1.0-1.0
-    1_combined_bs512_1ep-1.0-1.0
+    # 1_combined_bs4k_1ep-1.0-1.0
+    # 1_combined_bs512_1ep-1.0-1.0
 
     # 1_sft_random-PT_G2B-fresh-fresh_advanced_clean
     # 1_sft_random-PT_G2B-fresh-fresh_basic_clean
