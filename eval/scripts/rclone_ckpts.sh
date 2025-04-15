@@ -17,8 +17,9 @@ MLLM_KEYS=(
     # 2_sft_p2-3b-224_split-qa_mix0.25-1.0
 
     # 0_sft_p2-3b-448-448_split-qa
-    0_sft_p2-3b-448-224_split-qa
-    1_sft_p2-3b-448-224_split-qa
+    # 0_sft_p2-3b-448-224_split-qa
+    # 1_sft_p2-3b-448-224_split-qa
+    2_sft_p2-3b-448-224_split-qa
 
     # 0_sft_p2-3b-224
     # 1_sft_p2-3b-224

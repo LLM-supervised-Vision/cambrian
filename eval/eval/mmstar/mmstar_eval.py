@@ -118,7 +118,9 @@ def eval_model(args):
                                    "prompt": prompt,
                                    "gt_answer": gt_answer,
                                    "model_id": model_name,
-                                   "category": category}) + "\n")
+                                   "category": category,
+                                   "l2_category": l2_category,
+                                   }) + "\n")
         ans_file.flush()
     ans_file.close()
 

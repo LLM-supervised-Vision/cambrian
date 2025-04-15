@@ -24,6 +24,9 @@ def compute_metrics(jsonl_file, output_file, csv_file, extra_outdir=None):
     pred_list = []
     correct, total = 0, 0
     model = ""
+    categories = set()  # To store unique categories
+    category_metrics = {}  # To store metrics for each category
+
     with open(jsonl_file, 'r') as file:
         output_file = os.path.expanduser(output_file)
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -31,6 +34,13 @@ def compute_metrics(jsonl_file, output_file, csv_file, extra_outdir=None):
             for line in file:
                 total += 1.0
                 data = json.loads(line)
+
+                category = data.get('l2_category', '')
+                categories.add(category)
+                if category not in category_metrics:
+                    category_metrics[category] = {'correct': 0, 'total': 0}
+                category_metrics[category]['total'] += 1
+
                 # answer = data.get('answer', '').lower().split()[0].rstrip('.:,')
                 answer = data.get('answer', '').lower().split()
                 answer = answer[0].rstrip('.:,') if len(answer)>0 else ""
@@ -46,8 +56,20 @@ def compute_metrics(jsonl_file, output_file, csv_file, extra_outdir=None):
                 model = data.get('model_id', '')
                 if answer == gt_answer:
                     correct += 1.0
+                    category_metrics[category]['correct'] += 1
                 else:
                     out_file.write(line)
+
+    # Calculate metrics for each category
+    category_scores = {}
+    for category, metrics in category_metrics.items():
+        accuracy = (metrics['correct'] * 1.0 / metrics['total']) if metrics['total'] > 0 else 0.0
+        category_scores[category] = {
+            'correct': metrics['correct'],
+            'total': metrics['total'],
+            'accuracy': accuracy
+        }
+
 
     combined_data = {
         "model": model,
@@ -56,6 +78,7 @@ def compute_metrics(jsonl_file, output_file, csv_file, extra_outdir=None):
         "correct": correct,
         "accuracy": 100.0 * correct/total,
     }
+    combined_data.update(category_scores)
     add_data_to_csv(csv_file, combined_data)
     print(f"Model: {model}, Total: {total}, Correct: {correct}, Accuracy: {100.0 * correct/total}")
     print(f"Saved experiment data to {csv_file}")
