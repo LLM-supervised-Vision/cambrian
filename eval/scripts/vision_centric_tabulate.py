@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import argparse
 import ast  # For safely evaluating string representations of dicts
+import numpy as np # For NaN handling potentially
 
 # Define the mapping from desired output columns to benchmark/source column/metric
 # Format: (output_col_name, benchmark_name, source_csv_col, metric_key, multiplier)
@@ -67,45 +68,93 @@ BENCHMARKS_INFO = {
     "seed": {"dir": "seed", "csv": "experiments.csv"},
 }
 
+# --- Define Category Groupings for Averaging ---
+# Mapping from the desired average column name to the list of detailed columns
+CATEGORY_GROUPS = {
+    "AVG_Basic_Perception": [
+        "SEED-Instance_Counting", "MME-count", "SEED-Instance_Identity",
+        "MMB-identity_reasoning", "SEED-Instance_Attribute", "MMB-attribute_recognition",
+        "MMB-attribute_comparison", "MMB-action_recognition", "MME-color", "MME-existence"
+    ],
+    "AVG_Scene_Understanding": [
+        "SEED-Scene_Understanding", "MME-scene", "MMB-image_scene", "MMB-image_topic",
+        "MMB-image_style", "MMB-image_quality", "MMB-image_emotion"
+    ],
+    "AVG_Spatial_Understanding": [
+        "SEED-Instance_Location", "SEED-Spatial_Relation", "MMB-object_localization",
+        "MMB-spatial_relationship", "MME-position"
+    ],
+    "AVG_OCR_Text": [
+        "SEED-Text_Recognition", "MME-OCR", "MMB-ocr"
+    ],
+    "AVG_Complex_Reasoning": [
+        "SEED-Instance_Interaction", "SEED-Visual_Reasoning", "MME-code_reasoning",
+        "MME-numerical_calculation", "MME-text_translation", "MME-commonsense_reasoning",
+        "MMB-structuralized_image-text_understanding", "MMB-future_prediction",
+        "MMB-physical_property_reasoning", "MMB-function_reasoning",
+        "MMB-nature_relation", "MMB-physical_relation", "MMB-social_relation"
+    ]
+}
+# Create a reverse lookup: detailed column -> benchmark name
+COL_TO_BENCHMARK = {item[0]: item[1] for item in COLUMN_MAPPING}
+
+
 def safe_literal_eval(val):
     """Safely evaluate a string literal, returning None if it fails."""
     if pd.isna(val):
         return None
     try:
+        # Attempt to handle potential single quotes within JSON-like strings
+        if isinstance(val, str):
+             val = val.replace("'", '"') # Basic replacement, might need refinement
+             # Handle potential boolean literals if not already JSON standard
+             val = val.replace("True", "true").replace("False", "false")
+             val = val.replace("None", "null") # Handle None
         return ast.literal_eval(str(val)) # Ensure it's a string first
     except (ValueError, SyntaxError, TypeError):
-        # print(f"Warning: Could not parse value: {val}")
-        return None # Return None if parsing fails
+         # If literal_eval fails, try json.loads as a fallback for complex cases
+         try:
+             return json.loads(val)
+         except (json.JSONDecodeError, TypeError):
+            # print(f"Warning: Could not parse value: {val}")
+            return None # Return None if parsing fails
+
 
 def extract_metric(cell_value, metric_key, multiplier):
     """Extracts the specific metric from a cell value, which might be a dict."""
     if pd.isna(cell_value):
         return pd.NA
 
+    # Ensure cell_value is treated as a potential string first
+    str_cell_value = str(cell_value)
+
     if metric_key is None: # The column itself is the score
         try:
-            return float(cell_value) * multiplier
+            return float(str_cell_value) * multiplier
         except (ValueError, TypeError):
-             # print(f"Warning: Could not convert value to float: {cell_value}")
+             # print(f"Warning: Could not convert value to float: {str_cell_value}")
              return pd.NA
     else:
         # Cell contains a dict (likely as a string)
-        data_dict = safe_literal_eval(cell_value)
+        data_dict = safe_literal_eval(str_cell_value)
         if isinstance(data_dict, dict) and metric_key in data_dict:
             try:
-                return float(data_dict[metric_key]) * multiplier
+                metric_val = data_dict[metric_key]
+                if pd.isna(metric_val) or metric_val is None: # Check for None/NaN inside dict
+                    return pd.NA
+                return float(metric_val) * multiplier
             except (ValueError, TypeError):
                  # print(f"Warning: Could not convert metric '{metric_key}' to float in dict: {data_dict}")
                  return pd.NA
         else:
-            # print(f"Warning: Could not find key '{metric_key}' in parsed data or data is not a dict: {data_dict}")
+            # print(f"Warning: Could not find key '{metric_key}' in parsed data or data is not a dict: {data_dict} from cell {str_cell_value}")
             return pd.NA
 
 
 def tabulate_vision_centric_results(eval_dir, out_fname):
     """
     Loads results from MME, MMBench, SEED, extracts specific category scores,
-    and aggregates them into a single table.
+    calculates category averages, and aggregates them into a single table.
     """
     if not os.path.exists(eval_dir):
         raise ValueError(f"Evaluation directory {eval_dir} does not exist")
@@ -143,12 +192,12 @@ def tabulate_vision_centric_results(eval_dir, out_fname):
             if bench_map == bench_key:
                 if src_col in df.columns:
                     print(f"  Extracting: '{out_col}' from '{src_col}' (key: {metric}, mult: {mult})")
+                    # Apply extraction row by row
                     extracted_series = df[src_col].apply(lambda x: extract_metric(x, metric, mult))
-                    processed_cols[out_col] = extracted_series
+                    processed_cols[out_col] = extracted_series.astype(float) # Ensure numeric type
                 else:
                     print(f"  Warning: Source column '{src_col}' not found in {results_path} for '{out_col}'.")
-                    # Create a series of NaNs to represent the missing data
-                    processed_cols[out_col] = pd.Series([pd.NA] * len(df), index=df.index, name=out_col)
+                    processed_cols[out_col] = pd.Series([np.nan] * len(df), index=df.index, name=out_col, dtype=float) # Use np.nan
 
         if processed_cols:
             all_data[bench_key] = pd.DataFrame(processed_cols)
@@ -161,30 +210,78 @@ def tabulate_vision_centric_results(eval_dir, out_fname):
         print("Error: No benchmark data could be processed. Exiting.")
         return
 
-    # Start with the first available benchmark data
     final_df = None
     processed_keys = list(all_data.keys())
     if processed_keys:
-        final_df = all_data[processed_keys[0]]
-        # Merge subsequent benchmarks
+        # Initialize with the first DataFrame
+        first_key = processed_keys[0]
+        final_df = all_data[first_key]
+
+        # Outer merge with subsequent DataFrames
         for i in range(1, len(processed_keys)):
             key = processed_keys[i]
-            final_df = pd.merge(final_df, all_data[key], left_index=True, right_index=True, how='outer')
+            # Ensure columns being merged don't already exist in final_df from a *different* benchmark source
+            # (This shouldn't happen with the current setup but is good practice)
+            cols_to_merge = [col for col in all_data[key].columns if col not in final_df.columns]
+            if cols_to_merge:
+                 final_df = pd.merge(final_df, all_data[key][cols_to_merge], left_index=True, right_index=True, how='outer')
+            else:
+                 print(f"  Skipping merge for {key} as its columns are already present (or none processed).")
+
 
     if final_df is None or final_df.empty:
          print("Error: Failed to merge any data. Final DataFrame is empty.")
          return
 
-    # --- Reorder Columns based on Mapping ---
-    final_column_order = [item[0] for item in COLUMN_MAPPING]
-    # Ensure only columns that actually exist in the merged df are included
-    final_column_order_present = [col for col in final_column_order if col in final_df.columns]
+    # --- Calculate Category Averages ---
+    print("\n--- Calculating Category Averages ---")
+    average_scores_df = pd.DataFrame(index=final_df.index) # Ensure same index
 
-    # Add any columns present in final_df but not in the desired order (shouldn't happen with outer merge)
-    # extra_cols = [col for col in final_df.columns if col not in final_column_order_present]
-    # final_column_order_present.extend(extra_cols)
+    for avg_col_name, detail_cols in CATEGORY_GROUPS.items():
+        print(f"  Calculating average for: {avg_col_name}")
+        # Select only the detail columns that actually exist in final_df
+        cols_present = [col for col in detail_cols if col in final_df.columns]
+        if not cols_present:
+            print(f"    Warning: No columns found in final_df for category {avg_col_name}. Skipping average.")
+            average_scores_df[avg_col_name] = np.nan # Add NaN column
+            continue
 
-    final_df = final_df[final_column_order_present]
+        # Create a copy to avoid modifying the original data during division
+        category_data = final_df[cols_present].copy()
+
+        # Apply MME division rule (divide MME scores by 2)
+        mme_cols_in_category = []
+        for col in cols_present:
+            # Check if this column originates from the 'mme' benchmark
+            if COL_TO_BENCHMARK.get(col) == 'mme':
+                mme_cols_in_category.append(col)
+                # Divide the column by 2
+                category_data[col] = category_data[col] / 2.0
+
+        if mme_cols_in_category:
+            print(f"    Applied MME division rule (score/2) to columns: {mme_cols_in_category}")
+
+
+        # Calculate the row-wise mean, ignoring NaNs
+        average_scores_df[avg_col_name] = category_data.mean(axis=1, skipna=True)
+
+    # --- Combine Average Scores and Detailed Scores ---
+    # Concatenate the new average columns to the front of the detailed dataframe
+    final_df = pd.concat([average_scores_df, final_df], axis=1)
+
+    # --- Define Final Column Order ---
+    avg_column_names = list(CATEGORY_GROUPS.keys())
+    detail_column_order = [item[0] for item in COLUMN_MAPPING]
+
+    # Ensure only columns actually present in the final_df are included
+    final_avg_cols_present = [col for col in avg_column_names if col in final_df.columns]
+    final_detail_cols_present = [col for col in detail_column_order if col in final_df.columns]
+
+    # Combine the lists for the final order
+    final_combined_order = final_avg_cols_present + final_detail_cols_present
+
+    # Reorder the DataFrame
+    final_df = final_df[final_combined_order]
 
     # Sort by model name (index)
     final_df = final_df.sort_index()
@@ -193,21 +290,21 @@ def tabulate_vision_centric_results(eval_dir, out_fname):
     try:
         if out_fname.endswith(".xlsx"):
             final_df.to_excel(out_fname)
-            print(f"\nSaved vision-centric category results to Excel: {out_fname}")
+            print(f"\nSaved vision-centric category results (with averages) to Excel: {out_fname}")
         else:
             if not out_fname.endswith(".csv"):
                 out_fname += ".csv"
                 print(f"Warning: Output filename did not end with .csv or .xlsx. Saving as CSV: {out_fname}")
             final_df.to_csv(out_fname)
-            print(f"\nSaved vision-centric category results to CSV: {out_fname}")
+            print(f"\nSaved vision-centric category results (with averages) to CSV: {out_fname}")
     except Exception as e:
         print(f"\nError saving output file {out_fname}: {e}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Tabulate vision-centric category results from MME, MMBench, and SEED.")
+    parser = argparse.ArgumentParser(description="Tabulate vision-centric category results from MME, MMBench, and SEED, including category averages.")
     parser.add_argument("--eval_dir", type=str, default="eval", help="Directory containing evaluation results (e.g., 'eval/mme', 'eval/mmbench_en', 'eval/seed').")
-    parser.add_argument("--out_file", type=str, default="vision_centric_results.xlsx", help="Name of the output file (Excel or CSV).")
+    parser.add_argument("--out_file", type=str, default="vision_centric_results_with_avg.xlsx", help="Name of the output file (Excel or CSV).")
 
     args = parser.parse_args()
 
