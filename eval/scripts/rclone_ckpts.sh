@@ -7,12 +7,17 @@ GDRIVE_NAME="gdrive"
 
 # List of MLLM keys
 MLLM_KEYS=(
+    # 0_sft_p2-3b_tqa-concise_1.6M-737k
+    # 1_sft_p2-3b_tqa-concise_1.6M-737k
+    2_sft_p2-3b_tqa-concise_1.6M-737k
+    3_sft_p2-3b_tqa-concise_1.6M-737k
+
     # 1_sft_p2-3b-448-pp224
     # 2_sft_p2-3b-448-pp224
     # 3_sft_p2-3b-448-pp224
 
     # 0_sft_p2-10b-224
-    1_sft_p2-10b-224
+    # 1_sft_p2-10b-224
 
     # 1_sft_p2-3b-224_corrected-pp
     # 2_sft_p2-3b-224_corrected-pp

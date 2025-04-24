@@ -20,7 +20,7 @@ dependencies = [
     "requests", "httpx==0.24.0", "uvicorn", "fastapi",
     "einops==0.6.1", "einops-exts==0.0.4", "timm==0.9.16",
     "open_clip_torch", "diffusers[torch]", "torchtext==0.17.0",
-    "ezcolorlog", "gcsfs", "datasets", "nltk"
+    "ezcolorlog", "gcsfs", "datasets", "nltk", "openpyxl", "mmh3",
 ]
 
 [project.optional-dependencies]
