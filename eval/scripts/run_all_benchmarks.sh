@@ -10,28 +10,28 @@ conv_mode="$3"
 question_extension="$4"
 
 benchmarks=(
-    gqa
-    # vizwiz
-    scienceqa
-    textvqa
-    # pope
+    mmstar
     mme
     mmbench_en
     # mmbench_cn
-    mmvet
+    seed
+    gqa
+    # pope
+    # mmvet
+    scienceqa
     mmmu
     mathvista
     ai2d
     chartqa
+    ocrbench
+    textvqa
     docvqa
+    mmvp
+    realworldqa
     # infovqa
     # stvqa
-    ocrbench
-    mmstar
-    realworldqa
-    mmvp
+    # vizwiz
     # synthdog
-    seed
 )
 
 # Create a directory for checkpoint files if it doesn't exist
