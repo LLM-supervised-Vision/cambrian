@@ -7,7 +7,32 @@ GDRIVE_NAME="gdrive"
 
 # List of MLLM keys
 MLLM_KEYS=(
-    1_sft_p2-10b_tqfa-concise_1.6M-10M
+    # 0_sft_p2-10b_mqa-concise_737k-shuffled
+    # 1_sft_p2-10b_mqa-concise_737k-shuffled
+    2_sft_p2-10b_mqa-concise_737k-shuffled
+    
+    # 0_sft_p2-10b_mqa-concise_5565k-shuffled
+    # 1_sft_p2-10b_mqa-concise_5565k-shuffled
+    # 1_sft_p2-10b_mqa-concise_5565k-shuffled_froz9
+    # 2_sft_p2-10b_mqa-concise_5565k-shuffled
+
+    # 0_sft_p2-3b_mqa-concise_5565k-shuffled
+    # 1_sft_p2-3b_mqa-concise_5565k-shuffled
+
+    # 0_sft_p2-3b_mqa-concise_737k-shuffled
+    # 1_sft_p2-3b_mqa-concise_737k-shuffled
+    # 2_sft_p2-3b_mqa-concise_737k-shuffled
+
+    # 0_sft_p2-3b_mqa-concise_10M
+
+    # 1_sft_p2-10b_mqa-concise_10M
+    # 2_sft_p2-10b_mqa-concise_10M
+    
+    # 1_sft_p2-10b_tqfa-concise_1.6M-5565k
+
+    # 1_sft_p2-10b_tqfa-concise_1.6M-10M
+    # 2_sft_p2-10b_tqfa-concise_1.6M-10M
+    # 3_sft_p2-10b_tqfa-concise_1.6M-10M
 
     # 0_sft_p2-10b_tqa-concise_1.6M-737k
     # 1_sft_p2-10b_tqa-concise_1.6M-737k
